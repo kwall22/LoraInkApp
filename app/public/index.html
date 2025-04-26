@@ -1,0 +1,210 @@
+<html>
+     <head>
+          <meta name="viewport" content="width=device-width" />
+          <link rel="stylesheet" href="style.css">
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+          <title>LoRaInk</title>
+     </head>
+     <body>
+          <div id="app">
+               <header>
+                    <h1 @click="toHomePage" style="cursor: pointer;" >LoRaInk</h1>
+                    <div id="header-buttons-div">
+                         <button id="login-button" v-if="!loggedIn" @click="toLoginModal" >Login</button>
+                         <button id="register-button" v-if="!loggedIn" @click="toRegisterModal">Register</button>
+                         <button id="account-button" style="background: none;" v-if="loggedIn" @click="toAccountPage" ><img class width="50px" src="images/accountWhite.png"></button> 
+                    </div>
+                </header>
+                <main>
+                    <div class="register-modal" v-show="showRegisterModal && !showLoginModal">
+                         <h2>Register Account</h2>
+                         <div id="register-inputs">
+                              <input type="text" id="register-first-name" placeholder="First Name" v-model="registerData.firstName">
+                              <input type="text" id="register-last-name" placeholder="Last Name" v-model="registerData.lastName">
+                              <input type="email" id="register-email" placeholder="Email" v-model="registerData.email">
+                              <input type="password" id="register-password" placeholder="Password" v-model="registerData.password">
+                              <input type="text" id="register-scheduleNodeId" maxlength="8"placeholder="Schedule Device ID" v-model="registerData.scheduleNodeId">
+                              <input type="text" id="register-statusNodeId" maxlength="8" placeholder="Status Device ID" v-model="registerData.statusNodeId">
+                              <input type="text" id="register-scheduleHeader" maxlength="55" placeholder="Schedule Header" v-model="registerData.scheduleHeader">
+                              <input type="text" id="register-scheduleFooter" maxlength="70" placeholder="Schedule Footer" v-model="registerData.scheduleFooter">
+                         </div>
+                         <p v-if="registrationError" style="color:#ba1c21;margin:0px;">{{ registrationErrorMessage }}</p>
+                         <button id="register-user-button" ref="registerUserButton" @click="registerUser">Register</button>
+                    </div>
+                    <div class="login-modal" v-show="!loggedIn && !showRegisterModal">
+                         <h2>Login</h2>
+                         <div id="login-inputs">
+                              <input type="email" id="login-email" placeholder="Email" v-model="loginData.email">
+                              <input type="password" id="login-password" placeholder="Password" v-model="loginData.password" @keydown.enter="loginUser">
+                         </div>
+                         <p v-if="loginError" style="color:#ba1c21;margin:0px;">{{ loginErrorMessage }}</p>
+                         <button id="login-user-button" ref="loginUserButton" @click="loginUser">Login</button>
+                    </div>
+                    <div id="home-cards-section-div" v-if="showHomePage && loggedIn" :class="{'blurFilter': showAddEventModal || showModifyEventModal}">
+                         <div class="message-calendar-card-section" >
+                              <div class="schedule" ref="scheduleDiv" :style="scheduleStyle">
+                                   <div class="schedule-header">Time</div>
+                                   <div v-for="dayNumber in Array.from({ length: 5 }, (_, i) => i + 1)" key="dayNumber" class="schedule-header">{{ formatDay(dayNumber) }}</div>
+                                   <template v-for="(time, index) in timeSlots">
+                                       <div class="time-label">{{ formatTime(time) }}</div>
+                                       <div v-for="dayNumber in Array.from({ length: 5 }, (_, i) => i + 1)" :key="dayNumber" ref="slot" class="time-slot" @click="toggleAddEventModal(index + 2, dayNumber)" >
+                                           <template v-for="event in eventSchedule" :key="event.description + event.startTime">
+                                               <div v-if="timeToGridRow(event.startTime) == (index + 2) && event.dayOfTheWeek === dayNumber" class="event" name="event-box" :style="getEventStyle(event)" @click="prefillUpdateEventFields(event)">
+                                                  <strong style="margin:0px"> {{ event.description }} </strong>
+                                                  {{ formatTime(event.startTime) }} - {{ formatTime(event.endTime) }} 
+                                               </div>
+                                           </template>
+                                       </div>
+                                   </template>
+                               </div>
+                         </div>
+                         <div class="home-cards-container">
+                              <div class="home-card">
+                                   <img id="message-img" src="images/message.png">
+                                   <textarea id="message-input" v-model="messageInput" maxlength="70" @keydown.enter="sendMessageToServer"></textarea>
+                                   <img id="send-custom-arrow-img" src="images/arrow.png" ref="sendMessageButton"  @click="sendMessageToServer">
+                              </div>
+                              <div v-for="(message, index) in statusMessages.slice(0, 4)" :key="index" class="home-card">
+                                   <img id="message-img" src="images/message.png">
+                                   <h3>{{ getStatusText(index) }}</h3>
+                                   <img id="send-arrow-img" src="images/arrow.png" @click="sendMessageToServer(getStatusText(index))">
+                              </div>
+                         </div>
+                    </div>
+                    <div class="event-container" v-if="showAddEventModal">
+                         <span id="close-add-event-modal" @click="toggleAddEventModal(0, 0)" style="cursor: pointer;" >x</span>
+                         <h2>Add Event</h2>
+                         <label for="description" style="margin-right: 10px;">Event Description:</label>
+                         <input type="text" id="eventDescription" maxlength="13" v-model="eventForm.description"><br><br>
+                         
+                         <div id="time-div" >
+                              <label>Start Time</label>
+                              <input v-model="eventForm.startTime" type="time">
+                              <label>End Time</label>
+                              <input v-model="eventForm.endTime" type="time">
+                         </div>
+                         <div id="days-div">
+                              <h4>Select Days:</h4>
+                              <div id="days-checkboxes" v-for="dayNumber in Array.from({ length: 5 }, (_, i) => i + 1)" :key="dayNumber">
+                                   <input type="checkbox" :value="dayNumber" v-model="eventForm.selectedDays"> {{ formatDay(dayNumber) }}
+                              </div>
+                         </div>
+                         <div class="color-buttons-div">
+                              <input type="radio" name="buttonGroup" value="BLUE" v-model="eventForm.color" id="blueButton"><label style="background-color: blue;color:blue" class="color-button" for="blueButton">O</label>
+                              <input type="radio" name="buttonGroup" value="RED" v-model="eventForm.color" id="redButton"><label style="background-color: red;color:red;" class="color-button" for="redButton">O</label>
+                              <input type="radio" name="buttonGroup" value="YELLOW" v-model="eventForm.color" id="yellowButton"><label style="background-color: yellow;color:yellow;" class="color-button" for="yellowButton">O</label>
+                              <input type="radio" name="buttonGroup" value="GREEN" v-model="eventForm.color" id="greenButton"><label style="background-color: green;color:green;" class="color-button" for="greenButton">O</label>
+                              <input type="radio" name="buttonGroup" value="ORANGE" v-model="eventForm.color" id="orangeButton"><label style="background-color: orange;color:orange;" class="color-button" for="orangeButton">O</label>
+                         </div>
+                         <button id="add-event-button" ref="addEventButton" @click="addEvent" >Add</button>
+                    </div>
+                    <div class="update-event-container" v-if="showModifyEventModal">
+                         <span id="close-modify-event-modal" @click="closeModifyEventModal()" style="cursor: pointer;">x</span>
+                         <h2>Modify Event</h2>
+                         <label style="margin-right: 10px;">Event Description:</label>
+                         <input type="text" id="updateEventDescription" maxlength="13" v-model="updateEventForm.description"><br><br>
+                         
+                         <div id="time-div" >
+                              <label>Start Time</label>
+                              <input v-model="updateEventForm.startTime" type="time">
+                              <label>End Time</label>
+                              <input v-model="updateEventForm.endTime" type="time">
+                         </div>
+                         <div style="padding-top: 18px;">
+                              <label v-for="dayNumber in Array.from({ length: 5 }, (_, i) => i + 1)" :key="dayNumber + 9">
+                                   <input 
+                                     type="radio" 
+                                     :value="formatDay(dayNumber)" 
+                                     v-model="updateEventForm.dayOfTheWeek"
+                                   />
+                                   {{ formatDay(dayNumber) }}
+                                 </label>
+                         </div>
+                         <div class="color-buttons-div">
+                              <input type="radio" name="buttonGroup" value="BLUE" v-model="updateEventForm.color" id="blueButton"><label style="background-color: blue;color:blue" class="color-button" for="blueButton">O</label>
+                              <input type="radio" name="buttonGroup" value="RED" v-model="updateEventForm.color" id="redButton"><label style="background-color: red;color:red;" class="color-button" for="redButton">O</label>
+                              <input type="radio" name="buttonGroup" value="YELLOW" v-model="updateEventForm.color" id="yellowButton"><label style="background-color: yellow;color:yellow;" class="color-button" for="yellowButton">O</label>
+                              <input type="radio" name="buttonGroup" value="GREEN" v-model="updateEventForm.color" id="greenButton"><label style="background-color: green;color:green;" class="color-button" for="greenButton">O</label>
+                              <input type="radio" name="buttonGroup" value="ORANGE" v-model="updateEventForm.color" id="orangeButton"><label style="background-color: orange;color:orange;" class="color-button" for="orangeButton">O</label>
+                         </div>
+                         <div id="modify-buttons-div">
+                              <button @click="updateEvent()" ref="updateEventButton" >Update Event</button>
+                              <button @click="deleteEvent()" style="background-color: #ba1c21;color: white;" >Delete Event</button>
+                         </div>
+                    </div>
+                    <br>
+                    <div class="send-to-e-ink-div" v-if="showHomePage && loggedIn && scheduleChangesMade" >
+                         <div v-if="waitOnUpdateSchedule" class="spinner-container" ref="spinnerContainer">
+                              <div v-if="waitOnUpdateSchedule" class="spinner"></div>
+                         </div>
+                         <p v-if="scheduleESPNotConnected" style="color:#ba1c21;text-align: center; margin-top:0px; margin-bottom:5px;" > {{ scheduleESPNotConnectedMessage }} </p>
+                         <button @click="updateEInkSchedule" ref="updateEInkScheduleButton" >Update Display</button>
+                    </div>
+                    <div v-if="showAccountPage" class="account-container">
+                         <p @click="toHomePage" style="cursor: pointer; margin:0px; font-size:12px;" > < Back to Home</p>
+                         <div class="account-header-div">
+                              <h2 style="width:fit-content; margin:0px;" >Account Details</h2>
+                              <button id="logOut-button" v-if="loggedIn && showAccountPage" @click="logOutUser" style="background: none;"><img class width="40px" src="images/logout.png" title="logout"></button>
+                         </div>
+                         <hr>
+                         <div id="account-details-div">
+                              <div id="user-info-div">
+                                   <h3 style="margin-bottom:0px;" >Profile</h3>
+                                   <div id="user-info-flex-col">
+                                        <div id="user-info-flex-item">
+                                             <h4>First Name</h4>
+                                             <input type="text" :placeholder="userData.firstName" v-model="updateUserData.firstName">
+                                        </div>
+                                        <div id="user-info-flex-item">
+                                             <h4>Last Name</h4>
+                                             <input type="text" :placeholder="userData.lastName" v-model="updateUserData.lastName">
+                                        </div>
+                                        <div id="user-info-flex-item">
+                                             <h4>Schedule Device Id</h4>
+                                             <input type="text" :placeholder="userData.scheduleNodeId" maxlength="8" v-model="updateUserData.scheduleNodeId">
+                                        </div>
+                                        <div id="user-info-flex-item">
+                                             <h4>Email Address</h4>
+                                             <input type="text" :placeholder="userData.email" disabled>
+                                        </div>
+                                        <div id="user-info-flex-item">
+                                             <h4>Schedule Header</h4>
+                                             <input type="text" :placeholder="userData.scheduleHeader" maxlength="55" v-model="updateUserData.scheduleHeader">
+                                        </div>
+                                        <div id="user-info-flex-item">
+                                             <h4>Schedule Footer</h4>
+                                             <input type="text" :placeholder="userData.scheduleFooter" maxlength="70"  v-model="updateUserData.scheduleFooter">
+                                        </div>
+                                        <div id="user-info-flex-item">
+                                             <h4>Status Device Id</h4>
+                                             <input type="text" :placeholder="userData.statusNodeId" maxlength="8" v-model="updateUserData.statusNodeId">                
+                                        </div>
+                                   </div>
+                                   <button @click="updateUserInformation()" ref="saveUserButton">Save</button>
+                              </div>
+                              <div id="status-previews-div">
+                                   <h3>Status History</h3>
+                                   <div id="status-preview-scroll-div" >
+                                        <div id="status-preview-container" v-for="status in statusMessages" :key="status.id">
+                                             <p>{{ status.Content }}</p>
+                                             <button id="delete-status-preview-button" @click="deleteStatusMessage(status._id)"><img class width="25px" src="images/trashcan.png"></button>
+                                        </div>
+                                   </div>
+                              </div>
+                         </div>
+                         <div class="send-to-e-ink-div" v-if="showAccountPage && loggedIn && scheduleChangesMade" >
+                              <div v-if="waitOnUpdateSchedule" class="spinner-container" ref="spinnerContainer">
+                                   <div v-if="waitOnUpdateSchedule" class="spinner" style="border: 3px solid #ba1c21"></div>
+                              </div>
+                              <p v-if="scheduleESPNotConnected" style="color:#ba1c21;text-align: center; margin-top:0px; margin-bottom:5px;width: fit-content;margin-left:21%;" > {{ scheduleESPNotConnectedMessage }} </p>
+                              <button id="update-header-footer-button" @click="updateEInkSchedule" ref="updateEInkScheduleButton" >Update Display</button>
+                         </div>
+                    </div>
+                </main>
+          </div>
+          <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+          <script src="app.js"></script> 
+     </body>
+</html>
