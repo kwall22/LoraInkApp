@@ -108,6 +108,15 @@ struct StatusMessageData {
 * **E-ink Display Rendering:** Displaying status messages and color-coded schedules on the remote devices with efficient power management.
 
 ## Visuals
+* **Web Interface**
+    * Interactive Schedule and Recent Status Message Shortcuts <br>
+    <img src="images/theHomePage.png" width="300"> <br>
+    * Account Details Page with Status History
+    <img src="images/accountpage.png" width="300">
+    <br>
+    * Account Login and Register Page
+    <img src="images/loginpage.png" width="300">
+
 * **3D Models** 
     * CAD render of the large display <br>
     <img src="images/entire_large.png" width="300"> <br>
