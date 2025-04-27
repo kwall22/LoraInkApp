@@ -111,11 +111,12 @@ struct StatusMessageData {
 * **Web Interface**
     * Interactive Schedule and Recent Status Message Shortcuts <br>
     <img src="images/theHomePage.png" width="300"> <br>
-    * Account Details Page with Status History
+    * Account Details Page with Status History <br>
     <img src="images/accountpage.png" width="300">
     <br>
-    * Account Login and Register Page
+    * Account Login and Register Page <br>
     <img src="images/loginpage.png" width="300">
+    <br>
 
 * **3D Models** 
     * CAD render of the large display <br>
