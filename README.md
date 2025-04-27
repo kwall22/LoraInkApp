@@ -142,5 +142,5 @@ struct StatusMessageData {
 * [Heltec Wireless Paper Examples and Demos](https://github.com/todd-herbert/heltec-eink-modules/tree/main/examples/Wireless%20Paper)
 * [Radio Lib Library for SX1262 LoRa Radio](https://github.com/jgromes/RadioLib/tree/master/examples/SX126x)
 * [ArduinoWebsockets Library for ESP32 Client](https://github.com/gilmaimon/ArduinoWebsockets/blob/master/examples/Esp32-Client/Esp32-Client.ino)
-* [DJ Holt - Custom PCB Creation](https://www.cs.utahtech.edu/faculty/holt.xhtml)
+* [DJ Holt - Custom PCB Creation](https://github.com/djholt)
 
