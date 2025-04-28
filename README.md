@@ -1,4 +1,4 @@
-# LoraInk - For Low Power Digital Signage
+# LoraInk
 
 ## Overview
 
